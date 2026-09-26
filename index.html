@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gray Level Transformations — CSC360 Lab 02</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#141414;
+    --bg-elev:#1c1c1c;
+    --bg-elev-2:#232323;
+    --paper:#efece4;
+    --ink:#efece4;
+    --ink-dim:#a8a6a0;
+    --muted:#75746f;
+    --line:#3a3937;
+    --accent:#e2542b;
+    --accent-dim:#7a2c17;
+    --accent-ink:#0e0b0a;
+    --ok:#7fae6b;
+    --bad:#c85c4a;
+    --radius:2px;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px); scroll-behavior:smooth;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Archivo',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(circle at 10% 8%, rgba(226,84,43,0.05), transparent 40%),
+      radial-gradient(circle at 90% 85%, rgba(226,84,43,0.04), transparent 45%);
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#141414; --ink:#efece4; /* keep darkroom look in both modes; this is a deliberate aesthetic, not a light/dark swap */
+    }
+  }
+  ::selection{ background:var(--accent); color:#fff; }
+
+  a{ color:inherit; }
+  .mono{ font-family:'JetBrains Mono',ui-monospace,monospace; }
+
+  /* sprocket / filmstrip motif */
+  .sprockets{
+    height:14px;
+    background-image: repeating-linear-gradient(90deg, var(--bg-elev) 0 6px, transparent 6px 20px);
+    position:relative;
+    opacity:.9;
+  }
+  .sprockets::before, .sprockets::after{
+    content:"";
+    position:absolute; top:3px; left:0; right:0; height:8px;
+    background-image: repeating-linear-gradient(90deg, var(--bg) 0 4px, transparent 4px 20px);
+  }
+
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 24px; }
+
+  /* ---------- HEADER ---------- */
+  header.top{
+    padding:20px 0 0;
+  }
+  .top-row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:14px 0 18px; border-bottom:1px solid var(--line);
+    gap:16px; flex-wrap:wrap;
+  }
+  .course-id{ font-size:13px; letter-spacing:.02em; color:var(--ink-dim); }
+  .course-id b{ color:var(--ink); font-weight:600;}
+  .course-id .accent{ color:var(--accent); }
+
+  /* ---------- HERO ---------- */
+  .hero{ padding:56px 0 40px; }
+  .hero-grid{
+    display:grid; grid-template-columns:1.05fr .95fr; gap:48px; align-items:center;
+  }
+  @media (max-width:820px){ .hero-grid{ grid-template-columns:1fr; } }
+  h1.hero-title{
+    font-size:clamp(2.4rem, 5.4vw, 3.7rem);
+    line-height:1.02; letter-spacing:-0.015em; font-weight:800;
+    margin:10px 0 18px;
+  }
+  .hero-lede{ color:var(--ink-dim); font-size:1.05rem; line-height:1.55; max-width:46ch; margin:0 0 22px; }
+  .hero-cta{ display:flex; gap:12px; flex-wrap:wrap; }
+  .btn{
+    font-family:'JetBrains Mono',monospace; font-size:.85rem; font-weight:600;
+    padding:12px 20px; border-radius:var(--radius); border:1px solid var(--line);
+    background:transparent; color:var(--ink); cursor:pointer; text-decoration:none;
+    display:inline-flex; align-items:center; gap:8px; transition:border-color .15s ease, background .15s ease;
+  }
+  .btn:hover{ border-color:var(--accent); }
+  .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn.primary:hover{ background:#ef6438; }
+  .btn:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
+
+  .hero-demo{
+    background:var(--bg-elev); border:1px solid var(--line); padding:16px;
+  }
+  .hero-demo canvas{ width:100%; display:block; background:#0d0d0d; image-rendering:pixelated; }
+  .hero-slider-row{ margin-top:14px; }
+  .hero-formula{
+    margin-top:10px; font-size:.78rem; color:var(--ink-dim); display:flex; justify-content:space-between; align-items:center;
+  }
+  .hero-formula .val{ color:var(--accent); }
+
+  input[type="range"]{
+    -webkit-appearance:none; appearance:none; width:100%; height:3px;
+    background:var(--line); border-radius:2px; outline:none; cursor:pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:15px; height:15px; border-radius:50%;
+    background:var(--accent); border:2px solid #0e0b0a; cursor:pointer; margin-top:-6px;
+  }
+  input[type="range"]::-moz-range-thumb{
+    width:13px; height:13px; border-radius:50%; background:var(--accent); border:2px solid #0e0b0a; cursor:pointer;
+  }
+  input[type="range"]::-moz-range-track{ background:var(--line); height:3px; border-radius:2px; }
+  label.ctl-label{
+    display:flex; justify-content:space-between; font-size:.72rem; font-family:'JetBrains Mono',monospace;
+    color:var(--ink-dim); margin-bottom:6px;
+  }
+  label.ctl-label .v{ color:var(--paper); }
+
+  /* ---------- SECTION SHELL ---------- */
+  section{ padding:54px 0; border-top:1px solid var(--line); }
+  .section-head{ display:flex; justify-content:space-between; align-items:flex-end; gap:18px; margin-bottom:28px; flex-wrap:wrap; }
+  .section-head h2{ font-size:clamp(1.5rem,3vw,2.1rem); margin:0; letter-spacing:-.01em; font-weight:700; }
+  .section-head p{ margin:6px 0 0; color:var(--ink-dim); max-width:52ch; font-size:.95rem; }
+  .section-tag{ font-family:'JetBrains Mono',monospace; font-size:.75rem; color:var(--muted); white-space:nowrap; }
+
+  /* ---------- LAB BENCH ---------- */
+  .bench{
+    display:grid; grid-template-columns:230px 1fr; gap:0;
+    border:1px solid var(--line); background:var(--bg-elev);
+  }
+  @media (max-width:760px){ .bench{ grid-template-columns:1fr; } }
+
+  .bench-tabs{ border-right:1px solid var(--line); }
+  @media (max-width:760px){ .bench-tabs{ border-right:none; border-bottom:1px solid var(--line); display:flex; overflow-x:auto; } }
+  .tab{
+    display:block; width:100%; text-align:left; background:transparent; border:none; border-bottom:1px solid var(--line);
+    color:var(--ink-dim); padding:14px 16px; font-family:'JetBrains Mono',monospace; font-size:.78rem;
+    cursor:pointer; transition:background .12s ease, color .12s ease; white-space:nowrap;
+  }
+  .tab:last-child{ border-bottom:none; }
+  .tab .tname{ display:block; color:inherit; font-size:.86rem; font-family:'Archivo',sans-serif; font-weight:600; margin-bottom:2px; }
+  .tab:hover{ background:var(--bg-elev-2); color:var(--ink); }
+  .tab.active{ background:var(--accent); color:#fff; }
+  .tab.active .tname{ color:#fff; }
+
+  .bench-main{ padding:24px; }
+  .bench-formula{
+    font-family:'JetBrains Mono',monospace; font-size:1.05rem; color:var(--accent);
+    background:var(--bg); border:1px solid var(--line); padding:12px 16px; margin-bottom:18px; display:inline-block;
+  }
+  .bench-desc{ color:var(--ink-dim); font-size:.9rem; line-height:1.55; max-width:70ch; margin-bottom:20px; }
+
+  .bench-body{ display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+  @media (max-width:640px){ .bench-body{ grid-template-columns:1fr; } }
+
+  .canvas-card{ background:var(--bg); border:1px solid var(--line); padding:14px; }
+  .canvas-card h4{ margin:0 0 10px; font-size:.72rem; text-transform:none; letter-spacing:.02em; color:var(--muted); font-family:'JetBrains Mono',monospace; font-weight:500; }
+  .canvas-card canvas{ width:100%; display:block; background:#0d0d0d; image-rendering:pixelated; border:1px solid #000; }
+
+  .controls{ margin-top:16px; display:flex; flex-direction:column; gap:14px; }
+  .upload-row{ display:flex; gap:10px; align-items:center; margin-top:16px; flex-wrap:wrap; }
+  .upload-row input[type=file]{ font-size:.78rem; color:var(--ink-dim); font-family:'JetBrains Mono',monospace; max-width:220px; }
+  .tiny-btn{
+    font-family:'JetBrains Mono',monospace; font-size:.72rem; padding:6px 10px; border:1px solid var(--line);
+    background:transparent; color:var(--ink-dim); cursor:pointer;
+  }
+  .tiny-btn:hover{ color:var(--ink); border-color:var(--accent); }
+
+  .hist-canvas{ width:100%; height:110px; display:block; background:#0d0d0d; border:1px solid #000; }
+  .hist-legend{ display:flex; gap:16px; margin-top:8px; font-size:.72rem; color:var(--ink-dim); font-family:'JetBrains Mono',monospace; }
+  .hist-legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .swatch{ width:10px; height:10px; display:inline-block; }
+
+  /* ---------- EXERCISES ---------- */
+  .ex-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px){ .ex-grid{ grid-template-columns:1fr; } }
+  .ex-card{ background:var(--bg-elev); border:1px solid var(--line); padding:20px; display:flex; flex-direction:column; }
+  .ex-card.solved{ border-color:var(--ok); }
+  .ex-top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+  .ex-num{ font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--muted); }
+  .ex-status{ font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--ok); opacity:0; transition:opacity .15s ease; }
+  .ex-status.show{ opacity:1; }
+  .ex-prompt{ font-size:.95rem; line-height:1.5; margin:0 0 12px; }
+  .ex-given{ font-family:'JetBrains Mono',monospace; font-size:.82rem; color:var(--accent); background:var(--bg); border:1px solid var(--line); padding:10px 12px; margin-bottom:14px; }
+  .ex-answer-row{ display:flex; gap:10px; align-items:center; margin-top:auto; }
+  .ex-answer-row input[type=number]{
+    flex:1; background:var(--bg); border:1px solid var(--line); color:var(--ink);
+    font-family:'JetBrains Mono',monospace; font-size:.9rem; padding:9px 10px; border-radius:var(--radius);
+  }
+  .ex-answer-row input[type=number]:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  .ex-feedback{ margin-top:12px; font-size:.82rem; line-height:1.5; color:var(--ink-dim); display:none; padding:10px 12px; border-left:3px solid var(--line); background:var(--bg); }
+  .ex-feedback.show{ display:block; }
+  .ex-feedback.correct{ border-left-color:var(--ok); }
+  .ex-feedback.incorrect{ border-left-color:var(--bad); }
+  .ex-tracker{ font-family:'JetBrains Mono',monospace; font-size:.85rem; color:var(--accent); }
+
+  /* ---------- APPLICATIONS STRIP ---------- */
+  .apps-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line); border:1px solid var(--line); }
+  @media (max-width:820px){ .apps-grid{ grid-template-columns:repeat(2,1fr); } }
+  .app-cell{ background:var(--bg-elev); padding:20px; }
+  .app-cell h4{ margin:0 0 8px; font-size:.95rem; font-weight:700; }
+  .app-cell p{ margin:0; font-size:.82rem; color:var(--ink-dim); line-height:1.5; }
+
+  /* ---------- QUIZ ---------- */
+  .quiz-shell{ border:1px solid var(--line); background:var(--bg-elev); }
+  .quiz-head{
+    display:flex; justify-content:space-between; align-items:center; padding:16px 22px; border-bottom:1px solid var(--line);
+    font-family:'JetBrains Mono',monospace; font-size:.78rem; color:var(--ink-dim); flex-wrap:wrap; gap:10px;
+  }
+  .quiz-head .score-badge{ color:var(--accent); font-weight:700; }
+  .progress-track{ height:4px; background:var(--line); }
+  .progress-fill{ height:100%; background:var(--accent); width:0%; transition:width .25s ease; }
+
+  #quizArea{ padding:28px 24px; }
+  .q-block{ display:none; }
+  .q-block.active{ display:block; }
+  .q-count{ font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--muted); margin-bottom:8px; }
+  .q-prompt{ font-size:1.15rem; font-weight:600; margin:0 0 20px; max-width:60ch; line-height:1.4; }
+  .q-options{ display:grid; gap:10px; max-width:560px; }
+  .q-opt{
+    text-align:left; padding:13px 16px; border:1px solid var(--line); background:var(--bg);
+    color:var(--ink); cursor:pointer; font-size:.92rem; font-family:'Archivo',sans-serif;
+    display:flex; gap:12px; align-items:flex-start; transition:border-color .12s ease, background .12s ease;
+  }
+  .q-opt:hover{ border-color:var(--ink-dim); }
+  .q-opt .k{ font-family:'JetBrains Mono',monospace; color:var(--muted); flex-shrink:0; }
+  .q-opt.correct{ border-color:var(--ok); background:rgba(127,174,107,0.1); }
+  .q-opt.incorrect{ border-color:var(--bad); background:rgba(200,92,74,0.1); }
+  .q-opt[disabled]{ cursor:default; }
+  .q-feedback{ margin-top:16px; font-size:.86rem; color:var(--ink-dim); max-width:60ch; line-height:1.5; min-height:20px; }
+  .q-feedback.show{ padding:12px 14px; background:var(--bg); border-left:3px solid var(--accent); }
+  .q-next{ margin-top:20px; }
+
+  .quiz-result{ display:none; text-align:center; padding:20px 0 6px; }
+  .quiz-result.active{ display:block; }
+  .result-score{ font-family:'JetBrains Mono',monospace; font-size:3.2rem; color:var(--accent); font-weight:700; line-height:1; }
+  .result-label{ color:var(--ink-dim); margin:8px 0 22px; font-size:.9rem; }
+  .result-row{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+
+  footer{ padding:36px 0 48px; }
+  .foot-row{ display:flex; justify-content:space-between; gap:18px; flex-wrap:wrap; color:var(--muted); font-size:.78rem; font-family:'JetBrains Mono',monospace; }
+
+  .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; scroll-behavior:auto !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sprockets"></div>
+
+<header class="top">
+  <div class="wrap">
+    <div class="top-row">
+      <div class="course-id"><b>CSC360</b> · Image Processing — <span class="accent">Lab 02</span></div>
+      <div class="course-id">Prof. Alaa Hamdy &amp; Eng. Nourhan Salah &amp; Eng. Menna Medhat · Fall 2025</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="hero" style="border-top:none; padding-top:44px;">
+      <div class="hero-grid">
+        <div>
+          <div class="mono" style="font-size:.8rem; color:var(--accent);">s = T · r</div>
+          <h1 class="hero-title">Gray Level<br>Transformations</h1>
+          <p class="hero-lede">Every pixel gets remapped through a function T — that's the whole idea behind image enhancement. Drag the slider and watch a real image slide from its original values to a full negative, pixel by pixel.</p>
+          <div class="hero-cta">
+            <a href="#bench" class="btn primary">Open the lab bench</a>
+            <a href="#quiz" class="btn">Attempt the lab points</a>
+          </div>
+        </div>
+        <div class="hero-demo">
+          <canvas id="heroCanvas" width="280" height="280" aria-label="Interactive demo image transitioning between original and negative"></canvas>
+          <div class="hero-slider-row">
+            <label class="ctl-label" for="heroSlider"><span>identity → negative</span><span class="v" id="heroPct">0%</span></label>
+            <input type="range" id="heroSlider" min="0" max="100" value="0">
+          </div>
+          <div class="hero-formula">
+            <span>s = (L−1) − r</span>
+            <span class="val" id="heroFormulaVal">s = r</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="bench">
+      <div class="section-head">
+        <div>
+          <h2>The lab bench</h2>
+          <p>Pick a transformation, move its controls, and read the pixel values change live. The histogram underneath tracks how the whole intensity distribution shifts.</p>
+        </div>
+        <div class="section-tag">256 gray levels · 0–255</div>
+      </div>
+
+      <div class="bench">
+        <div class="bench-tabs" role="tablist" id="tabList"></div>
+        <div class="bench-main">
+          <div id="formulaBox" class="bench-formula mono"></div>
+          <p id="descBox" class="bench-desc"></p>
+
+          <div class="bench-body">
+            <div class="canvas-card">
+              <h4>original</h4>
+              <canvas id="srcCanvas" width="260" height="260"></canvas>
+            </div>
+            <div class="canvas-card">
+              <h4>transformed — s = T(r)</h4>
+              <canvas id="outCanvas" width="260" height="260"></canvas>
+            </div>
+          </div>
+
+          <div id="controls" class="controls"></div>
+
+          <div class="upload-row">
+            <label class="tiny-btn" for="fileInput" style="cursor:pointer;">use your own image</label>
+            <input type="file" id="fileInput" accept="image/*" class="sr-only">
+            <button class="tiny-btn" id="resetImgBtn">reset to test pattern</button>
+          </div>
+
+          <div class="canvas-card" style="margin-top:20px;">
+            <h4>histogram — pixel count by intensity</h4>
+            <canvas id="histCanvas" class="hist-canvas" width="600" height="140"></canvas>
+            <div class="hist-legend">
+              <span><span class="swatch" style="background:#55534d;"></span>original</span>
+              <span><span class="swatch" style="background:var(--accent);"></span>transformed</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="exercises">
+      <div class="section-head">
+        <div>
+          <h2>Work the numbers</h2>
+          <p>The bench shows what a transform does to a whole image. These six exercises ask you to compute a single pixel by hand — the way you'd check your work in the lab report.</p>
+        </div>
+        <div class="section-tag ex-tracker" id="exTracker">0 / 6 solved</div>
+      </div>
+
+      <div class="ex-grid" id="exGrid"></div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Where this shows up</h2>
+          <p>The same handful of formulas, applied everywhere pixels need reshaping.</p>
+        </div>
+      </div>
+      <div class="apps-grid">
+        <div class="app-cell">
+          <h4>Medical imaging</h4>
+          <p>Negative and gray-level slicing pull faint structures out of dark regions on X-rays and CT scans.</p>
+        </div>
+        <div class="app-cell">
+          <h4>Remote sensing</h4>
+          <p>Contrast stretching rescues satellite images shot under poor illumination or sensor limits.</p>
+        </div>
+        <div class="app-cell">
+          <h4>Display calibration</h4>
+          <p>Every screen applies its own gamma correction — power-law transforms compensate for it.</p>
+        </div>
+        <div class="app-cell">
+          <h4>Computer vision</h4>
+          <p>Thresholding and histograms are the first step before edge detection, segmentation, or OCR.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="quiz">
+      <div class="section-head">
+        <div>
+          <h2>Attempt the lab points</h2>
+          <p>Ten questions pulled straight from this lab. Answer at your own pace — your score is saved on this device.</p>
+        </div>
+        <div class="section-tag">10 questions</div>
+      </div>
+
+      <div class="quiz-shell">
+        <div class="quiz-head">
+          <span>question <span id="qNum">1</span> / <span id="qTotal">10</span></span>
+          <span class="score-badge" id="liveScore">0 pts</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+        <div id="quizArea"></div>
+
+        <div class="quiz-result" id="quizResult">
+          <div class="result-score" id="finalScore">0/10</div>
+          <div class="result-label" id="finalLabel">Give it a go — nothing here is timed.</div>
+          <div class="result-row">
+            <button class="btn primary" id="retryBtn">Retry the quiz</button>
+            <a href="#bench" class="btn">Back to the bench</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="sprockets" style="margin-bottom:18px;"></div>
+    <div class="foot-row">
+      <span>CSC360 — Image Processing · Lab 02 · Gray Level Transformations</span>
+      <span>Instructor: Prof. Alaa Hamdy · Eng. Nourhan Salah · Eng. Menna Medhat · Fall 2025</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ shared helpers ============ */
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+  function buildTestPattern(w,h){
+    const c = document.createElement('canvas'); c.width=w; c.height=h;
+    const ctx = c.getContext('2d');
+    // base gradient 0 -> 255 left to right
+    const grad = ctx.createLinearGradient(0,0,w,0);
+    grad.addColorStop(0,'#050505'); grad.addColorStop(1,'#f5f5f5');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+    // vertical dark band (shadow detail) on the left third
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0,0,w*0.22,h);
+    // soft circles at varied gray levels to create midtone structure
+    const levels = [30, 70, 110, 150, 190, 225];
+    levels.forEach((lvl, i)=>{
+      const cx = w*(0.15 + i*0.145);
+      const cy = h*(0.28 + (i%2)*0.42);
+      const r = w*0.09;
+      const g = ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+      g.addColorStop(0, `rgb(${lvl},${lvl},${lvl})`);
+      g.addColorStop(1, `rgba(${lvl},${lvl},${lvl},0.15)`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+    });
+    // bright highlight patch top-right (near clipping) for slicing/threshold demos
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(w*0.74, h*0.06, w*0.2, h*0.18);
+    // a few thin dark lines (fine detail, useful for log transform demo)
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 2;
+    for(let i=0;i<5;i++){
+      ctx.beginPath();
+      ctx.moveTo(w*0.05, h*0.65 + i*8);
+      ctx.lineTo(w*0.4, h*0.6 + i*8);
+      ctx.stroke();
+    }
+    return ctx.getImageData(0,0,w,h);
+  }
+
+  function toGray(imgData){
+    const d = imgData.data;
+    const out = new Uint8ClampedArray(imgData.width*imgData.height);
+    for(let i=0, p=0; i<d.length; i+=4, p++){
+      out[p] = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+    }
+    return out;
+  }
+
+  function drawGray(canvas, grayArr, w, h){
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    const id = ctx.createImageData(w,h);
+    for(let p=0,i=0; p<grayArr.length; p++, i+=4){
+      const v = grayArr[p];
+      id.data[i]=v; id.data[i+1]=v; id.data[i+2]=v; id.data[i+3]=255;
+    }
+    ctx.putImageData(id,0,0);
+  }
+
+  function histogramOf(grayArr){
+    const h = new Array(256).fill(0);
+    for(let i=0;i<grayArr.length;i++) h[grayArr[i]]++;
+    return h;
+  }
+
+  function drawHistogram(canvas, histOriginal, histTransformed){
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+    const maxV = Math.max(1, Math.max(...histOriginal), Math.max(...histTransformed));
+    const bins = 64; const binW = w/bins; const perBin = 256/bins;
+    function drawSet(hist, color, alpha){
+      ctx.fillStyle = color; ctx.globalAlpha = alpha;
+      for(let b=0;b<bins;b++){
+        let sum=0;
+        for(let k=0;k<perBin;k++) sum += hist[Math.floor(b*perBin+k)] || 0;
+        const barH = (sum/maxV)*h*0.95;
+        ctx.fillRect(b*binW+1, h-barH, binW-2, barH);
+      }
+      ctx.globalAlpha = 1;
+    }
+    drawSet(histOriginal, '#55534d', 0.9);
+    drawSet(histTransformed, '#e2542b', 0.75);
+  }
+
+  /* ============ hero mini-demo ============ */
+  const heroSrc = buildTestPattern(160,160);
+  const heroGray = toGray(heroSrc);
+  const heroCanvas = document.getElementById('heroCanvas');
+  const heroSlider = document.getElementById('heroSlider');
+  const heroPct = document.getElementById('heroPct');
+  const heroFormulaVal = document.getElementById('heroFormulaVal');
+
+  function renderHero(){
+    const t = heroSlider.value/100; // 0 = identity, 1 = full negative
+    const out = new Uint8ClampedArray(heroGray.length);
+    for(let i=0;i<heroGray.length;i++){
+      const r = heroGray[i];
+      const neg = 255 - r;
+      out[i] = r + t*(neg - r);
+    }
+    drawGray(heroCanvas, out, 160, 160);
+    heroPct.textContent = Math.round(t*100)+'%';
+    heroFormulaVal.textContent = t < 0.02 ? 's = r' : (t > 0.98 ? 's = 255 − r' : 's = r + t·(255−2r)');
+  }
+  heroSlider.addEventListener('input', renderHero);
+  renderHero();
+
+  /* ============ lab bench ============ */
+  const MODES = [
+    {
+      id:'identity', name:'Identity', tag:'baseline',
+      formula:'s = r',
+      desc:'Every input value maps straight to the same output value. No enhancement happens — this is the reference point every other transform is compared against.',
+      controls: [],
+      compute: (r, p)=> r
+    },
+    {
+      id:'negative', name:'Negative', tag:'linear',
+      formula:'s = (L − 1) − r',
+      desc:'Each pixel is flipped around the middle of the range. Dark areas become light and light areas become dark — handy for pulling detail out of dark regions, as in mammography.',
+      controls: [],
+      compute: (r, p)=> 255 - r
+    },
+    {
+      id:'log', name:'Log transform', tag:'nonlinear',
+      formula:'s = c · log(1 + r)',
+      desc:'Expands dark pixel values while compressing bright ones. The "+1" keeps log(0) from blowing up to infinity. Flip the toggle for the inverse — it does the opposite: compresses shadows, expands highlights.',
+      controls: [
+        {key:'c', label:'c (scale)', min:0.2, max:3, step:0.05, def:1},
+        {key:'inverse', label:'inverse log', type:'toggle', def:0}
+      ],
+      compute: (r, p)=>{
+        const cBase = 255/Math.log(256);
+        if(!p.inverse){
+          return p.c * cBase * Math.log(1+r);
+        } else {
+          // inverse log: opposite curve, compress dark / expand bright
+          return 255 - p.c*cBase*Math.log(1+(255-r));
+        }
+      }
+    },
+    {
+      id:'power', name:'Power-law (gamma)', tag:'nonlinear',
+      formula:'s = c · rᵞ',
+      desc:'Gamma below 1 brightens the image; gamma above 1 darkens it. This is exactly what display gamma correction compensates for.',
+      controls: [
+        {key:'gamma', label:'γ (gamma)', min:0.1, max:4, step:0.05, def:1}
+      ],
+      compute: (r,p)=>{
+        const c = 255/Math.pow(255, p.gamma);
+        return c*Math.pow(r, p.gamma);
+      }
+    },
+    {
+      id:'slice', name:'Gray-level slicing', tag:'piecewise',
+      formula:'s = 255 if A ≤ r ≤ B, else …',
+      desc:'Highlights one band of gray levels [A…B] by pushing it to white. Toggle whether pixels outside the band keep their original value or drop to black.',
+      controls: [
+        {key:'a', label:'A (min)', min:0, max:255, step:1, def:80},
+        {key:'b', label:'B (max)', min:0, max:255, step:1, def:170},
+        {key:'preserve', label:'preserve background', type:'toggle', def:1}
+      ],
+      compute: (r,p)=>{
+        const lo = Math.min(p.a,p.b), hi = Math.max(p.a,p.b);
+        if(r>=lo && r<=hi) return 255;
+        return p.preserve ? r : 0;
+      }
+    },
+    {
+      id:'threshold', name:'Brightness thresholding', tag:'binary',
+      formula:'s = 0 if r < T, else 255',
+      desc:'A special, binary case of gray-level slicing: every pixel becomes pure black or pure white depending on a single cutoff T.',
+      controls: [
+        {key:'t', label:'T (threshold)', min:0, max:255, step:1, def:128}
+      ],
+      compute: (r,p)=> r < p.t ? 0 : 255
+    },
+    {
+      id:'stretch', name:'Contrast stretching', tag:'normalization',
+      formula:'s = (r−r_min)/(r_max−r_min) · (s_max−s_min) + s_min',
+      desc:'Rescales a narrow input range [r_min…r_max] to fill a wider output range [s_min…s_max] — the classic fix for a flat, low-contrast image.',
+      controls: [
+        {key:'rmin', label:'r_min', min:0, max:254, step:1, def:60},
+        {key:'rmax', label:'r_max', min:1, max:255, step:1, def:190},
+        {key:'smin', label:'s_min', min:0, max:254, step:1, def:0},
+        {key:'smax', label:'s_max', min:1, max:255, step:1, def:255}
+      ],
+      compute: (r,p)=>{
+        const rmin = Math.min(p.rmin,p.rmax-1), rmax = Math.max(p.rmax, p.rmin+1);
+        const t = clamp((r-rmin)/(rmax-rmin), 0, 1);
+        return p.smin + t*(p.smax-p.smin);
+      }
+    }
+  ];
+
+  let currentMode = MODES[1]; // start on negative — the most immediately visible effect
+  let params = {};
+  let srcW=260, srcH=260;
+  let srcGray = null;
+
+  function resetParams(mode){
+    params = {};
+    mode.controls.forEach(c=> params[c.key]=c.def);
+  }
+
+  const tabList = document.getElementById('tabList');
+  MODES.forEach(m=>{
+    const b = document.createElement('button');
+    b.className='tab'+(m===currentMode?' active':'');
+    b.setAttribute('role','tab');
+    b.innerHTML = `<span class="tname">${m.name}</span><span>${m.tag}</span>`;
+    b.addEventListener('click', ()=>{
+      currentMode = m;
+      resetParams(m);
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      b.classList.add('active');
+      buildControls();
+      renderBench();
+    });
+    tabList.appendChild(b);
+  });
+  resetParams(currentMode);
+
+  const srcCanvas = document.getElementById('srcCanvas');
+  const outCanvas = document.getElementById('outCanvas');
+  const histCanvas = document.getElementById('histCanvas');
+  const formulaBox = document.getElementById('formulaBox');
+  const descBox = document.getElementById('descBox');
+  const controlsBox = document.getElementById('controls');
+
+  function loadDefaultImage(){
+    const id = buildTestPattern(srcW, srcH);
+    srcGray = toGray(id);
+    drawGray(srcCanvas, srcGray, srcW, srcH);
+    renderBench();
+  }
+
+  function buildControls(){
+    controlsBox.innerHTML = '';
+    formulaBox.textContent = currentMode.formula;
+    descBox.textContent = currentMode.desc;
+    currentMode.controls.forEach(c=>{
+      const row = document.createElement('div');
+      if(c.type==='toggle'){
+        row.innerHTML = `
+          <label class="ctl-label"><span>${c.label}</span><span class="v" id="val-${c.key}">${params[c.key]?'on':'off'}</span></label>
+          <button class="tiny-btn" data-key="${c.key}" style="width:100%;">${params[c.key]?'ON':'OFF'} — click to toggle</button>
+        `;
+        controlsBox.appendChild(row);
+        row.querySelector('button').addEventListener('click', (e)=>{
+          params[c.key] = params[c.key] ? 0 : 1;
+          e.target.textContent = (params[c.key]?'ON':'OFF') + ' — click to toggle';
+          document.getElementById('val-'+c.key).textContent = params[c.key]?'on':'off';
+          renderBench();
+        });
+      } else {
+        row.innerHTML = `
+          <label class="ctl-label" for="ctl-${c.key}"><span>${c.label}</span><span class="v" id="val-${c.key}">${params[c.key]}</span></label>
+          <input type="range" id="ctl-${c.key}" min="${c.min}" max="${c.max}" step="${c.step}" value="${params[c.key]}">
+        `;
+        controlsBox.appendChild(row);
+        row.querySelector('input').addEventListener('input', (e)=>{
+          params[c.key] = parseFloat(e.target.value);
+          document.getElementById('val-'+c.key).textContent = params[c.key];
+          renderBench();
+        });
+      }
+    });
+    if(currentMode.controls.length===0){
+      controlsBox.innerHTML = '<p style="color:var(--muted); font-size:.82rem; font-family:JetBrains Mono, monospace;">no parameters — this transform is fixed</p>';
+    }
+  }
+
+  function renderBench(){
+    if(!srcGray) return;
+    const out = new Uint8ClampedArray(srcGray.length);
+    for(let i=0;i<srcGray.length;i++){
+      out[i] = clamp(Math.round(currentMode.compute(srcGray[i], params)), 0, 255);
+    }
+    drawGray(outCanvas, out, srcW, srcH);
+    drawHistogram(histCanvas, histogramOf(srcGray), histogramOf(out));
+  }
+
+  buildControls();
+  loadDefaultImage();
+
+  document.getElementById('resetImgBtn').addEventListener('click', loadDefaultImage);
+
+  document.getElementById('fileInput').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      const c = document.createElement('canvas');
+      // fit into srcW x srcH preserving aspect via cover-crop
+      const scale = Math.max(srcW/img.width, srcH/img.height);
+      const dw = img.width*scale, dh = img.height*scale;
+      c.width = srcW; c.height = srcH;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, (srcW-dw)/2, (srcH-dh)/2, dw, dh);
+      srcGray = toGray(ctx.getImageData(0,0,srcW,srcH));
+      drawGray(srcCanvas, srcGray, srcW, srcH);
+      renderBench();
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  });
+
+  /* ============ exercises ============ */
+  const EXERCISES = [
+    {
+      title:'Negative transformation',
+      given:'L = 256, r = 100',
+      prompt:'A pixel has value r = 100 in an 8-bit image. What is s after a negative transformation?',
+      answer: 155,
+      tol: 0,
+      explain:'s = (L−1) − r = 255 − 100 = 155.'
+    },
+    {
+      title:'Log transformation',
+      given:'c = 50, r = 50   (s = c·log(1+r), natural log)',
+      prompt:'Using s = c·log(1+r) with c = 50, what is s for r = 50? Round to the nearest whole number.',
+      answer: 197,
+      tol: 5,
+      explain:'ln(1+50) = ln(51) ≈ 3.93, so s = 50 × 3.93 ≈ 197. A tolerance of ±5 is allowed for rounding.'
+    },
+    {
+      title:'Power-law (gamma)',
+      given:'c = 1, γ = 0.5, r = 100',
+      prompt:'Using s = c·r^γ with c = 1 and γ = 0.5, what is s for r = 100?',
+      answer: 10,
+      tol: 1,
+      explain:'s = 1 × 100^0.5 = √100 = 10. Because γ < 1, the pixel gets brighter (closer to the high end) relative to a linear map.'
+    },
+    {
+      title:'Gray-level slicing',
+      given:'A = 100, B = 150, background NOT preserved, r = 120',
+      prompt:'r = 120 falls inside the range [A, B]. With the background not preserved, what is s?',
+      answer: 255,
+      tol: 0,
+      explain:'Any r inside [A, B] is pushed to the maximum value: s = 255, regardless of whether the background is preserved.'
+    },
+    {
+      title:'Brightness thresholding',
+      given:'T = 128, r = 90',
+      prompt:'Using the rule "s = 0 if r < T, else s = 255", what is s for r = 90?',
+      answer: 0,
+      tol: 0,
+      explain:'90 < 128, so the pixel falls below the threshold and is mapped to s = 0.'
+    },
+    {
+      title:'Contrast stretching',
+      given:'r_min = 50, r_max = 200, s_min = 0, s_max = 255, r = 80',
+      prompt:'Using s = (r−r_min)/(r_max−r_min) · (s_max−s_min) + s_min, what is s for r = 80? Round to the nearest whole number.',
+      answer: 51,
+      tol: 2,
+      explain:'(80−50)/(200−50) = 30/150 = 0.2. s = 0.2 × (255−0) + 0 = 51.'
+    }
+  ];
+
+  const exSolved = new Set();
+  const exGrid = document.getElementById('exGrid');
+  const exTracker = document.getElementById('exTracker');
+
+  function updateExTracker(){
+    exTracker.textContent = exSolved.size + ' / ' + EXERCISES.length + ' solved';
+  }
+
+  EXERCISES.forEach((ex, idx)=>{
+    const card = document.createElement('div');
+    card.className = 'ex-card';
+    card.id = 'ex-'+idx;
+    card.innerHTML = `
+      <div class="ex-top">
+        <span class="ex-num mono">EXERCISE ${idx+1} · ${ex.title}</span>
+        <span class="ex-status mono" id="ex-status-${idx}">✓ solved</span>
+      </div>
+      <p class="ex-prompt">${ex.prompt}</p>
+      <div class="ex-given mono">${ex.given}</div>
+      <div class="ex-answer-row">
+        <input type="number" step="any" id="ex-input-${idx}" placeholder="your answer for s" aria-label="Your answer for ${ex.title}">
+        <button class="btn" id="ex-check-${idx}">Check</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-${idx}"></div>
+    `;
+    exGrid.appendChild(card);
+
+    function check(){
+      const input = document.getElementById('ex-input-'+idx);
+      const val = parseFloat(input.value);
+      const fb = document.getElementById('ex-feedback-'+idx);
+      fb.classList.add('show');
+      if(isNaN(val)){
+        fb.className = 'ex-feedback show incorrect';
+        fb.textContent = 'Type a number first.';
+        return;
+      }
+      const correct = Math.abs(val - ex.answer) <= ex.tol;
+      if(correct){
+        fb.className = 'ex-feedback show correct';
+        fb.textContent = '✓ Correct — ' + ex.explain;
+        card.classList.add('solved');
+        document.getElementById('ex-status-'+idx).classList.add('show');
+        exSolved.add(idx);
+      } else {
+        fb.className = 'ex-feedback show incorrect';
+        fb.textContent = '✗ Not yet. Expected s = ' + ex.answer + (ex.tol? (' (±'+ex.tol+')') : '') + '. ' + ex.explain;
+      }
+      updateExTracker();
+    }
+    document.getElementById('ex-check-'+idx).addEventListener('click', check);
+    document.getElementById('ex-input-'+idx).addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); check(); } });
+  });
+  updateExTracker();
+
+  /* ============ quiz ============ */
+  const QUESTIONS = [
+    {
+      q:"What formula defines the negative transformation of an image with L gray levels?",
+      opts:["s = r", "s = (L − 1) − r", "s = c·log(1+r)", "s = c·r^γ"],
+      correct:1,
+      note:"Negative transformation subtracts every pixel from L−1 (the maximum value), flipping the intensity range."
+    },
+    {
+      q:"In the log transform s = c·log(r + 1), why is 1 added to r before taking the log?",
+      opts:["To keep the output within 8 bits", "Because log(0) is undefined (approaches infinity)", "To make the constant c unnecessary", "To convert the image to color"],
+      correct:1,
+      note:"A pixel intensity of 0 would make log(0) blow up, so 1 is added to guarantee the minimum input to the log is at least 1."
+    },
+    {
+      q:"What does the log transformation do to dark versus bright pixel values?",
+      opts:["Expands dark values, compresses bright values", "Compresses dark values, expands bright values", "Leaves both unchanged", "Inverts both to their negative"],
+      correct:0,
+      note:"Log transform stretches the low (dark) end of the range and compresses the high (bright) end — useful for revealing shadow detail."
+    },
+    {
+      q:"Power-law transformation is also known by what other name?",
+      opts:["Histogram equalization", "Gamma correction", "Brightness thresholding", "Contrast stretching"],
+      correct:1,
+      note:"s = c·r^γ is commonly called gamma correction, since γ is the exponent that display devices need compensated for."
+    },
+    {
+      q:"In gray-level slicing without background preservation, what happens to pixels outside the chosen range [A…B]?",
+      opts:["They are set to 255", "They are set to a low value (e.g. 0)", "They are left at their original value", "They are inverted"],
+      correct:1,
+      note:"Without preserving the background, everything outside the target range is pushed to a low value, isolating the sliced band."
+    },
+    {
+      q:"Brightness thresholding is best described as:",
+      opts:["A type of log transformation", "A binary special case of gray-level slicing", "The same as gamma correction", "A histogram-only technique"],
+      correct:1,
+      note:"Thresholding maps r < T to 0 and everything else to 255 — a strict, two-level version of gray-level slicing."
+    },
+    {
+      q:"On a standard image histogram, what does the x-axis represent?",
+      opts:["Pixel count", "Image width in pixels", "The range of gray/intensity levels (e.g. 0–255)", "Time"],
+      correct:2,
+      note:"The x-axis spans intensity values (0–255 for an 8 bpp image); the y-axis shows how many pixels fall at each value."
+    },
+    {
+      q:"Contrast stretching is also commonly referred to as:",
+      opts:["Equalization", "Normalization", "Segmentation", "Convolution"],
+      correct:1,
+      note:"Contrast stretching is often called normalization — it rescales a narrow intensity range to fill a wider desired range."
+    },
+    {
+      q:"In the cut-off fraction method for contrast stretching (p = c · peak), what does 'peak' refer to?",
+      opts:["The maximum pixel intensity possible (255)", "The actual peak count value from the original histogram", "The number of pixels to ignore", "The gamma value used"],
+      correct:1,
+      note:"'peak' is the actual peak of the original histogram's pixel count — the cut-off fraction c scales that peak to find a new threshold p."
+    },
+    {
+      q:"Which application is most associated with the negative transformation?",
+      opts:["Compressing file size", "Revealing detail in darker regions, e.g. medical imaging", "Color balancing", "Edge sharpening only"],
+      correct:1,
+      note:"By flipping intensities, negative transformation makes faint dark-region detail easier to see — widely used in medical and remote-sensing imagery."
+    }
+  ];
+
+  let qIndex = 0;
+  let score = 0;
+  let answered = [];
+
+  const qNumEl = document.getElementById('qNum');
+  const qTotalEl = document.getElementById('qTotal');
+  const liveScoreEl = document.getElementById('liveScore');
+  const progressFill = document.getElementById('progressFill');
+  const quizArea = document.getElementById('quizArea');
+  const quizResult = document.getElementById('quizResult');
+  const finalScore = document.getElementById('finalScore');
+  const finalLabel = document.getElementById('finalLabel');
+
+  qTotalEl.textContent = QUESTIONS.length;
+
+  function loadSavedScore(){
+    try{
+      const raw = localStorage.getItem('csc360-lab2-best-score');
+      if(raw){
+        const best = JSON.parse(raw);
+        if(typeof best === 'number') return best;
+      }
+    }catch(e){}
+    return null;
+  }
+
+  function saveScoreIfBest(s){
+    try{
+      const prev = loadSavedScore();
+      if(prev === null || s > prev){
+        localStorage.setItem('csc360-lab2-best-score', JSON.stringify(s));
+      }
+    }catch(e){}
+  }
+
+  function buildQuiz(){
+    quizArea.innerHTML = '';
+    QUESTIONS.forEach((item, idx)=>{
+      const block = document.createElement('div');
+      block.className = 'q-block'+(idx===0?' active':'');
+      block.id = 'q-'+idx;
+      block.innerHTML = `
+        <div class="q-count">POINT ${idx+1}</div>
+        <p class="q-prompt">${item.q}</p>
+        <div class="q-options">
+          ${item.opts.map((o,i)=>`<button class="q-opt" data-i="${i}"><span class="k">${String.fromCharCode(65+i)}</span><span>${o}</span></button>`).join('')}
+        </div>
+        <div class="q-feedback" id="fb-${idx}"></div>
+        <div class="q-next">
+          <button class="btn primary" id="next-${idx}" style="display:none;">${idx===QUESTIONS.length-1?'See results':'Next question'}</button>
+        </div>
+      `;
+      quizArea.appendChild(block);
+
+      block.querySelectorAll('.q-opt').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          if(answered[idx] !== undefined) return;
+          const chosen = parseInt(btn.dataset.i,10);
+          answered[idx] = chosen;
+          const isCorrect = chosen === item.correct;
+          if(isCorrect) score++;
+          block.querySelectorAll('.q-opt').forEach((b2,i2)=>{
+            b2.disabled = true;
+            if(i2===item.correct) b2.classList.add('correct');
+            else if(i2===chosen) b2.classList.add('incorrect');
+          });
+          const fb = document.getElementById('fb-'+idx);
+          fb.textContent = (isCorrect? '+1 point. ' : 'Not quite. ') + item.note;
+          fb.classList.add('show');
+          document.getElementById('next-'+idx).style.display = 'inline-flex';
+          updateHeader();
+        });
+      });
+
+      const nextBtn = block.querySelector('#next-'+idx);
+      nextBtn.addEventListener('click', ()=>{
+        if(idx < QUESTIONS.length-1){
+          block.classList.remove('active');
+          qIndex = idx+1;
+          document.getElementById('q-'+qIndex).classList.add('active');
+          updateHeader();
+        } else {
+          finishQuiz();
+        }
+      });
+    });
+    updateHeader();
+  }
+
+  function updateHeader(){
+    qNumEl.textContent = qIndex+1;
+    liveScoreEl.textContent = score + ' pts';
+    progressFill.style.width = ((qIndex)/(QUESTIONS.length))*100 + '%';
+  }
+
+  function finishQuiz(){
+    quizArea.style.display = 'none';
+    document.querySelector('.quiz-head').style.display='none';
+    document.querySelector('.progress-track').style.display='none';
+    quizResult.classList.add('active');
+    finalScore.textContent = score + '/' + QUESTIONS.length;
+    saveScoreIfBest(score);
+    const best = loadSavedScore();
+    let msg;
+    if(score === QUESTIONS.length) msg = 'Full marks — every lab point covered.';
+    else if(score >= QUESTIONS.length*0.7) msg = 'Solid grasp of the material. Revisit the missed ones on the bench above.';
+    else msg = 'Worth another pass through the lab bench before you retry.';
+    if(best !== null) msg += ' Best score on this device: ' + best + '/' + QUESTIONS.length + '.';
+    finalLabel.textContent = msg;
+  }
+
+  document.getElementById('retryBtn').addEventListener('click', ()=>{
+    qIndex = 0; score = 0; answered = [];
+    quizArea.style.display = '';
+    document.querySelector('.quiz-head').style.display='';
+    document.querySelector('.progress-track').style.display='';
+    quizResult.classList.remove('active');
+    buildQuiz();
+  });
+
+  buildQuiz();
+
+})();
+</script>
+</body>
+</html>
